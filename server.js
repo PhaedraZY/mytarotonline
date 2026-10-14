@@ -119,7 +119,7 @@ export async function createApp(options = {}) {
       }
       if (request.method === 'GET' && ['/api/settings', '/api/health'].includes(pathname)) {
         const settings = await publicSettings(store, env, options.fetchImpl);
-        return send(response, 200, pathname === '/api/health' ? { ok: true, version: '0.2.0', ...settings } : settings);
+        return send(response, 200, pathname === '/api/health' ? { ok: true, version: '0.3.0', ...settings } : settings);
       }
       if (request.method === 'GET' && pathname === '/api/history') {
         return send(response, 200, { readings: [...store.readings].reverse().slice(0, 80).map(r => ({ id: r.id, question: r.question, createdAt: r.createdAt, status: r.status, cardNames: r.drawn.map(d => d.card.name), theme: r.theme })) });

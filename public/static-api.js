@@ -1,8 +1,10 @@
 /* GitHub Pages adapter. All reading and artwork data stays in this browser. */
+import { referenceInterpretation } from './reading-guide.js';
+export { referenceInterpretation } from './reading-guide.js';
 const BASE = new URL('./', import.meta.url);
 const DATABASE_NAME = `lunaria-pages-v1:${BASE.pathname}`;
 const ASSET_PREFIX = 'lunaria-asset:';
-const MODEL = 'browser-reference-v1';
+const MODEL = 'browser-reference-v2';
 let databasePromise;
 let catalogPromise;
 const imageURLs = new Map();
@@ -97,7 +99,7 @@ async function hydrateCard(card) {
 async function publicReading(record) {
   const { pool, ...reading } = record;
   reading.drawn = await Promise.all(record.drawn.map(async draw => ({ ...structuredClone(draw), card: await hydrateCard(draw.card) })));
-  reading.slots = pool.filter(slot => !record.drawn.some(draw => draw.token === slot.token)).map(slot => ({ token: slot.token }));
+  reading.slots = pool.map(slot => ({ token: slot.token, selected: record.drawn.some(draw => draw.token === slot.token) }));
   reading.selectedCount = reading.drawn.length;
   reading.mode = record.interpretation ? 'reference' : null;
   reading.provider = record.interpretation ? 'reference' : null;
@@ -106,11 +108,11 @@ async function publicReading(record) {
 }
 export function createReadingRecord(input, catalog) {
   const spread = catalog.spreads.find(item => item.id === input.spreadId);
-  requireValue(spread && ['one', 'three'].includes(spread.id), '请选择单张或三张牌阵。');
+  requireValue(spread && spread.positions.length >= 1 && spread.positions.length <= 10, '请选择列表中的有效牌阵。');
   requireValue(typeof input.allowReversed === 'boolean', '请明确是否启用逆位。');
   requireValue(typeof input.question === 'string' && input.question.length <= 800, '问题文字不能超过 800 字。');
   const now = new Date().toISOString();
-  return { id: uuid(), question: input.question.trim() || '此刻，我可以从什么角度理解自己的状态？', theme: ['lunar', 'ember', 'forest'].includes(input.theme) ? input.theme : 'lunar', spreadId: spread.id, positions: structuredClone(spread.positions), requiredCount: spread.positions.length, allowReversed: input.allowReversed, createdAt: now, updatedAt: now, deckVersion: catalog.deck.version, status: 'selecting', clientRequestId: input.clientRequestId || null, drawn: [], followups: [], interpretation: null, pool: shuffled(catalog.cards).map(card => ({ token: uuid(), card: structuredClone(card), orientation: input.allowReversed && randomBelow(2) ? 'reversed' : 'upright' })) };
+  return { id: uuid(), question: input.question.trim() || '此刻，我可以从什么角度理解自己的状态？', theme: ['lunar', 'ember', 'forest'].includes(input.theme) ? input.theme : 'lunar', spreadId: spread.id, spreadName: spread.name, spreadDescription: spread.description, layout: spread.layout, positions: structuredClone(spread.positions), requiredCount: spread.positions.length, allowReversed: input.allowReversed, createdAt: now, updatedAt: now, deckVersion: catalog.deck.version, status: 'selecting', clientRequestId: input.clientRequestId || null, drawn: [], followups: [], interpretation: null, pool: shuffled(catalog.cards).map(card => ({ token: uuid(), card: structuredClone(card), orientation: input.allowReversed && randomBelow(2) ? 'reversed' : 'upright' })) };
 }
 export function selectRecord(reading, token) {
   requireValue(typeof token === 'string', '请选择本次牌阵中的牌。');
@@ -123,13 +125,6 @@ export function selectRecord(reading, token) {
   reading.status = reading.drawn.length === reading.requiredCount ? 'drawn' : 'selecting';
   reading.updatedAt = new Date().toISOString();
   return reading;
-}
-export function referenceInterpretation(reading) {
-  return {
-    summary: '以下是本次牌面的基础释义，供你自行对照问题。这段内容来自牌义资料库，没有调用 AI，也不会推断你的个人经历。',
-    cards: reading.drawn.map(draw => ({ cardId: draw.cardId, positionId: draw.positionId, orientation: draw.orientation, symbolAnchor: draw.card[draw.orientation].keywords.join(' · '), interpretation: `在「${draw.positionLabel}」的位置，${draw.card.name}${draw.orientation === 'reversed' ? '逆位' : '正位'}的基础含义是：${draw.card[draw.orientation].meaning}`, reflectionQuestion: `这些象征中，哪一点最贴近你在「${draw.positionLabel}」上的真实感受？` })),
-    synthesis: '将各张牌对应到自己的处境，比较它们之间的呼应与矛盾。基础释义提供象征视角，留给你自行联想与判断的空间。', actions: ['写下一个你已经知道的事实，以及一个仍需要验证的假设。'], closing: '牌是一个提问的入口，下一步的选择仍在你手中。',
-  };
 }
 async function mutateReading(id, update) {
   const db = await database();

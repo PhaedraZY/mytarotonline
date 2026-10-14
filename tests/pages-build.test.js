@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { buildPages } from '../scripts/build-pages.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FILES = ['index.html', 'styles.css', 'art.js', 'app.js', 'static-api.js', 'deployment.js'];
+const FILES = ['index.html', 'styles.css', 'art.js', 'app.js', 'static-api.js', 'reading-guide.js', 'deployment.js'];
 
 async function listFiles(directory, prefix = '') {
   const result = [];
@@ -60,7 +60,7 @@ test('Pages 发布包只包含静态页面、完整78牌与公开来源，适配
   const sources = JSON.parse(await fs.readFile(path.join(output, 'data/deck-sources.json'), 'utf8'));
   assert.equal(catalog.deck.cardCount, 78);
   assert.equal(new Set(catalog.cards.map(card => card.id)).size, 78);
-  assert.deepEqual(catalog.spreads.map(spread => spread.positions.length), [1, 3]);
+  assert.deepEqual(catalog.spreads.map(spread => spread.positions.length), [1, 3, 3, 5, 5, 5]);
   assert.equal(sources.cards.length, 78);
   const hashes = new Set();
   for (const card of catalog.cards) {
@@ -84,7 +84,7 @@ test('Pages 发布包只包含静态页面、完整78牌与公开来源，适配
   assert.match(staticModule, /(?:\.\/)?data\/catalog\.json/);
   const bases = ['https://example.github.io/', 'https://example.github.io/tarot-atelier/', 'https://mytarotonline.xyz/'];
   for (const base of bases) {
-    for (const ref of [...assetRefs, './static-api.js', './data/catalog.json', './attribution.html', ...catalog.cards.map(card => card.image)]) {
+    for (const ref of [...assetRefs, './static-api.js', './reading-guide.js', './data/catalog.json', './attribution.html', ...catalog.cards.map(card => card.image)]) {
       assert.ok(!ref.startsWith('/'), `Root-relative path would escape a project site: ${ref}`);
       const resolved = new URL(ref, base);
       assert.ok(resolved.href.startsWith(base), `${resolved.href} escaped ${base}`);

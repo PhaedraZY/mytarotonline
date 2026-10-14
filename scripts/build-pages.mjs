@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { SPREADS } from '../lib/engine.js';
 
 const PROJECT_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const PUBLIC_FILES = ['index.html', 'styles.css', 'art.js', 'app.js', 'static-api.js'];
+const PUBLIC_FILES = ['index.html', 'styles.css', 'art.js', 'app.js', 'static-api.js', 'reading-guide.js'];
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'";
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 

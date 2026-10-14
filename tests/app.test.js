@@ -49,7 +49,7 @@ test('选牌幂等、无重复、隐藏未选牌、禁止换牌，失败和恢�
   assert.equal(response.status, 201);
   const first = response.body;
   assert.equal(first.slots.length, 78);
-  assert.ok(first.slots.every(s => Object.keys(s).join() === 'token'));
+  assert.ok(first.slots.every(s => Object.keys(s).join() === 'token,selected' && s.selected === false));
   assert.equal(first.pool, undefined);
   assert.equal((await request('/api/readings', { ...input, clientRequestId: 'stable-request-123' })).body.id, first.id);
   assert.equal((await request(`/api/readings/${first.id}/interpret`, {})).status, 409);
@@ -62,7 +62,9 @@ test('选牌幂等、无重复、隐藏未选牌、禁止换牌，失败和恢�
   response = await request(route, { token: first.slots[2].token });
   const drawn = response.body.drawn;
   assert.equal(new Set(drawn.map(d => d.cardId)).size, 3);
-  assert.equal(response.body.slots.length, 75);
+  assert.equal(response.body.slots.length, 78);
+  assert.equal(response.body.slots.filter(s => !s.selected).length, 75);
+  assert.deepEqual(response.body.slots.map(s => s.token), first.slots.map(s => s.token));
   assert.equal((await request(route, { token: first.slots[3].token })).status, 409);
   const completed = await request(`/api/readings/${first.id}/interpret`, { provider: 'reference' });
   assert.equal(completed.body.mode, 'reference');

@@ -48,7 +48,8 @@
       <form id="question-form" class="question-form">
         <label for="question">此刻，你想探索什么？<span>可留空 · 最多 600 字</span></label>
         <textarea id="question" name="question" maxlength="600" rows="3" placeholder="例如：面对新的工作机会，我可以如何看清自己的期待与顾虑？"></textarea>
-        <fieldset class="spread-options"><legend>选择与你此刻相合的牌阵</legend><label class="spread-option"><input type="radio" name="spread" value="one"><span><strong>一束微光</strong><small>一张牌 · 此刻的指引</small></span><span class="spread-icon" aria-hidden="true">▯</span></label><label class="spread-option"><input type="radio" name="spread" value="three" checked><span><strong>内心的回响</strong><small>三张牌 · 当下 / 未见 / 指引</small></span><span class="spread-icon" aria-hidden="true">▯ ▯ ▯</span></label></fieldset>
+        <fieldset class="spread-options" id="spread-options"><legend>从你的问题出发，选择一种牌阵</legend><p class="field-note">正在展开可用的牌阵…</p></fieldset>
+        <section class="spread-guide" id="spread-guide" aria-live="polite" hidden></section>
         <div class="question-footer"><label class="check-label"><input id="allow-reversed" type="checkbox" checked><span>让正位与逆位都参与这次相遇</span></label><button class="primary-button" id="start-button" type="submit" disabled>静心，开始洗牌 <span aria-hidden="true">✧</span></button></div>
         <p class="inline-status" id="start-status" role="status">正在展开完整牌组…</p>
       </form>
@@ -58,9 +59,10 @@
         <div id="selection-scene" hidden>
           <div class="selection-top"><span class="mini-label" id="deck-label">THE COMPLETE DECK / 78</span><button class="text-button" id="restart-draw">重新开始 ↺</button></div>
           <p class="draw-status" id="draw-status" role="status" tabindex="-1"></p>
-          <div id="fan-area" class="fan-area"><div class="fan-aura" aria-hidden="true"></div><div class="fan-circle" aria-hidden="true"></div><div id="card-fan" class="card-fan" aria-label="待选择的牌"></div><p class="fan-hint">无需寻找正确的那张。让直觉，轻轻停留。</p></div>
+          <p class="draw-position-description" id="draw-position-description"></p>
+          <div id="fan-area" class="fan-area"><div class="fan-aura" aria-hidden="true"></div><div class="fan-circle" aria-hidden="true"></div><div id="card-fan" class="card-fan" aria-label="洗好后顺序固定的整副牌"></div><p class="fan-hint" id="fan-hint">只洗这一次。慢慢选，剩下的牌会留在原位。</p></div>
           <div class="fan-pagination" id="fan-pagination"><button id="previous-cards" class="round-button" aria-label="上一组牌">←</button><span id="fan-page"></span><button id="next-cards" class="round-button" aria-label="下一组牌">→</button></div>
-          <div class="selected-heading"><span></span><p>属于你的相遇</p><span></span></div>
+          <div class="selected-heading"><span></span><p id="selected-heading">依次放下，等你翻开</p><span></span></div>
           <div class="draw-cards" id="draw-cards"></div>
           <div class="draw-controls"><button class="primary-button" id="reveal-button" hidden>轻触，开启第一张牌 <span aria-hidden="true">✧</span></button></div>
           <p class="inline-status" id="draw-error" role="alert"></p>
@@ -72,7 +74,7 @@
         <p class="reading-question" id="reading-question"></p>
         <div class="interpret-loading" id="interpret-loading" hidden><span class="loading-star" aria-hidden="true">✧</span><p>正在把牌面的象征，织成给你的信。</p><small>复杂解读可能需要一些时间，你的牌已妥善保存。</small></div>
         <div id="interpret-error" class="error-panel" hidden><p id="interpret-error-text"></p><button id="retry-interpret" class="primary-button">再试一次</button><button id="reference-interpret" class="text-button">先阅读基础牌义</button><button class="text-button" data-open="settings">调整解读设置</button></div>
-        <div id="reading-content" hidden><p class="reading-summary" id="reading-summary"></p><div id="reading-sections" class="reading-sections"></div><section class="synthesis-section"><p class="eyebrow">THE THREAD BETWEEN YOUR CARDS</p><h4>连成一条温柔的线</h4><p id="reading-synthesis"></p></section><section class="actions-section" id="actions-section"><h4>把一点星光，带回生活</h4><ul id="reading-actions"></ul></section><div class="reading-end"><p id="reading-closing"></p><p class="saved-note">本次相遇已保存至「星光手记」</p><button class="text-button" id="restart-button">再留一段时光给自己 <span aria-hidden="true">↺</span></button></div><form id="followup-form" class="followup-form"><label for="followup-question">想沿着这封信，再聊一点？</label><div><input id="followup-question" maxlength="600" placeholder="写下你想继续探索的一个问题" required><button type="submit" class="outline-button">继续聊聊 ↗</button></div><p class="inline-status" id="followup-status" role="status"></p></form><div id="followup-answers" class="followup-answers" aria-live="polite"></div></div>
+        <div id="reading-content" hidden><div class="reading-summary" id="reading-summary"></div><div id="reading-sections" class="reading-sections"></div><section class="synthesis-section"><p class="eyebrow">THE THREAD BETWEEN YOUR CARDS</p><h4>连成一条温柔的线</h4><div id="reading-synthesis"></div></section><section class="actions-section" id="actions-section"><h4>可以试试的下一步</h4><ul id="reading-actions"></ul></section><div class="reading-end"><p id="reading-closing"></p><p class="saved-note">本次相遇已保存至「星光手记」</p><button class="text-button" id="restart-button">再留一段时光给自己 <span aria-hidden="true">↺</span></button></div><form id="followup-form" class="followup-form"><label for="followup-question">想沿着这封信，再聊一点？</label><div><input id="followup-question" maxlength="600" placeholder="写下你想继续探索的一个问题" required><button type="submit" class="outline-button">继续聊聊 ↗</button></div><p class="inline-status" id="followup-status" role="status"></p></form><div id="followup-answers" class="followup-answers" aria-live="polite"></div></div>
       </article>
       <p class="ritual-disclaimer">塔罗提供象征与自我探索的视角，AI 解读也可能有偏差。你的人生，始终由你书写。</p>
     </section>

@@ -1,6 +1,6 @@
 # API 与运行说明
 
-版本：0.2.0。核对日期：2026-10-14（Asia/Shanghai）。本文仅描述本机 AI 版本；GitHub Pages 版使用浏览器存储和基础牌义，见文档 11。本文以当前 `server.js`、`lib/` 和 `public/` 实现为准。
+版本：0.3.0。核对日期：2026-10-14（Asia/Shanghai）。本文仅描述本机 AI 版本；GitHub Pages 版使用浏览器存储和基础牌义，见文档 11。本文以当前 `server.js`、`lib/` 和 `public/` 实现为准。
 
 ## 1. 启动与服务关系
 
@@ -34,12 +34,12 @@ cd path\to\mytarotonline
 .\scripts\local-model.ps1 Stop
 ```
 
-重启电脑后重新运行 `Start`。模型可通过官方下载脚本或自行安装 Ollama 部署，步骤见仓库 README。项目脚本将模型保存在 `.models/`，并禁用 Ollama 云功能。网页请求默认使用 8,192 上下文，关闭思考，单次常规解读输出上限 2,600 token。网页请求保留模型 10 分钟；独立测试脚本使用 5 分钟。
+重启电脑后重新运行 `Start`。模型可通过官方下载脚本或自行安装 Ollama 部署，步骤见仓库 README。项目脚本将模型保存在 `.models/`，并禁用 Ollama 云功能。本地 Qwen 3.5 的解读和追问启用思考，使用 12,288 上下文；其他本地模型一至三张牌使用 8,192，五张及追问使用 12,288。可用 OLLAMA_NUM_CTX 显式覆盖。一／三／五张牌的回答预算为 2,400／3,600／4,800 token，追问为 1,800；Qwen 3.5 另加 5,000 token 供思考，前端只显示最终回答。连接短测试关闭思考。网页请求保留模型 10 分钟；独立测试脚本使用 5 分钟。
 
 ## 2. 使用流程与定制
 
 1. 在首页选择月隐之庭、赤曜书房或森语回廊。主题影响配色、氛围与 AI 语气，不改变抽牌算法。
-2. 点击「开启我的占卜」，输入问题，选择单张或三张牌阵、是否启用逆位。界面问题上限 600 字符；API 上限 800 字符；留空使用默认自我探索问题。
+2. 点击「开启我的占卜」，输入问题，从六种单张／三张／五张牌阵中选择玩法、是否启用逆位。界面问题上限 600 字符；API 上限 800 字符；留空使用默认自我探索问题。
 3. 查看洗牌，翻页浏览牌背并选择牌。每组桌面最多 26 张、窄屏最多 13 张，牌池来自完整 78 张，而非仅从当前分组抽取。
 4. 按选牌顺序逐张翻开；全部翻开后请求解读。AI 失败时可重试同一牌阵，也可选择明确标注的基础牌义。
 5. 在结果下继续追问，或到「星光手记」查看和恢复历史会话。基础牌义模式不生成 AI 追问。
@@ -79,7 +79,7 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 | `PORT` | 网页端口，默认 4173 |
 | `TAROT_PROVIDER` | 没有已保存选择时的默认 provider，默认 `local` |
 | `OLLAMA_BASE_URL`、`OLLAMA_MODEL` | 本机模型原生 API 地址及模型名 |
-| `OLLAMA_NUM_CTX` | 本机上下文，默认 8192，应用限制在 4096–16384 |
+| `OLLAMA_NUM_CTX` | 本机上下文，自动 8192／12288；Qwen 3.5 解读默认 12288，应用限制在 4096–16384 |
 | `DASHSCOPE_API_KEY` 或 `QWEN_API_KEY` | 千问密钥，前者优先 |
 | `QWEN_MODEL`、`QWEN_BASE_URL` | 千问模型与官方接口地址 |
 | `DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL` | DeepSeek 密钥与模型 |
@@ -90,7 +90,7 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 
 通过界面输入的密钥只提交至本机服务端，读取设置和健康接口不返回密钥，浏览器 Local Storage 不存密钥。**`.runtime/settings.json` 中的密钥是明文，未使用系统密钥库加密**；`.env` 同样属于私有本机文件。这两个位置已被 `.gitignore` 排除，备份或分享项目时应按私密配置处理。
 
-云端解读会发送用户问题、抽到的牌及相关牌义、角色语气；追问还发送既有解读及最近至多 3 轮追问。当前是文字解读，经典牌图和用户上传的画作不会作为图片发送给模型。
+云端解读会发送用户问题、抽到的牌及相关牌义、角色语气；追问还发送既有解读及最近至多 2 轮追问。当前是文字解读，经典牌图和用户上传的画作不会作为图片发送给模型。
 
 ## 4. 业务 API
 
@@ -108,7 +108,7 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 | `POST /api/settings` | 保存 `{provider, model?, baseUrl?, apiKey?}` | 更新后的公开设置 |
 | `POST /api/models/test` | `{provider?}`，省略使用当前设置 | `ok`、`model`、`latencyMs`、测试消息 |
 | `POST /api/readings` | 新建牌阵，结构见下文 | HTTP 201，新会话及不透明牌槽 token；幂等重放为 200 |
-| `GET /api/readings/:id` | 恢复指定会话 | 会话、未选槽 token、已抽牌、解读、追问与错误状态 |
+| `GET /api/readings/:id` | 恢复指定会话 | 会话、固定 78 个槽 token 及选择状态、已抽牌、解读、追问与错误状态 |
 | `POST /api/readings/:id/select` | `{token}` | 更新后的会话与新抽牌结果 |
 | `POST /api/readings/:id/interpret` | `{provider?}` | `readingId`、`status`、`interpretation`、provider/model、耗时和 usage |
 | `POST /api/readings/:id/followups` | `{question, provider?}` | `answer`、provider/model、耗时 |
@@ -128,9 +128,9 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 }
 ```
 
-`spreadId` 为 `one` 或 `three`；`allowReversed` 必须明确为布尔值；`theme` 为 `lunar`、`ember`、`forest`，其他值回退到 lunar。`clientRequestId` 可选，长度 8–100，只允许字母、数字、下划线与连字符；重复使用会返回原会话，开始新问题时必须换新值。
+`spreadId` 为 `one`、`three`、`timeline`、`decision`、`relationship` 或 `cross`；`allowReversed` 必须明确为布尔值；`theme` 为 `lunar`、`ember`、`forest`，其他值回退到 lunar。`clientRequestId` 可选，长度 8–100，只允许字母、数字、下划线与连字符；重复使用会返回原会话，开始新问题时必须换新值。
 
-单张牌位为 `focus`；三张依次为 `present`（当下）、`unseen`（未见之处）、`guidance`（前行的指引）。新会话返回 `slots:[{"token":"…"}, ...]`；选择其中一个 token 提交 `select`，按选择顺序放入牌位。重复提交同一 token 不会多抽；抽够后不能替换牌。
+通过 `GET /api/catalog` 的 `spreads` 获取六种牌阵及 `positions`、`description`、`questionHint`、`layout`，不应在客户端硬编码两种玩法。新会话保存牌阵名称、布局、牌位说明和整副牌的快照。`slots:[{"token":"…","selected":false}, ...]` 始终保留原来的 78 个位置；抽取后只将对应位置的 `selected` 设为 `true`，不重新洗牌、不压缩队列，也不公开未抽牌的身份与方向。选择 token 提交 `select`，按选择顺序放入牌位。重复提交同一 token 不会多抽；抽够后不能替换牌。
 
 结构化解读形状：
 
@@ -159,9 +159,9 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 
 ## 5. 随机性、失败与限制
 
-新建会话时，服务端使用 Node `crypto.randomInt` 进行 Fisher–Yates 洗牌，不放回抽取。启用逆位时每张牌独立以 1/2 概率分配逆位。浏览器只获取未选牌的随机 token，不能通过未选槽响应提前读取牌 ID 或方向。程序确定牌，模型只解读。
+新建会话时，服务端使用 Node `crypto.randomInt` 进行 Fisher–Yates 洗牌，不放回抽取。启用逆位时每张牌独立以 1/2 概率分配逆位。浏览器获取固定 78 个位置的随机 token 和选择状态，不能通过未选槽响应提前读取牌 ID 或方向。程序确定牌，模型只解读。
 
-解读响应经过 JSON 解析、内容形状与长度校验，并逐项核对卡牌数量、顺序、ID、牌位和方向。结构或牌面错误最多追加一次修复请求，仍失败则不展示不一致的结果。网络、额度和权限错误不会盲目自动重试。用户可以重新解读，原抽牌保持不变；同一 provider 与 model 已完成的解读直接返回缓存。
+解读响应经过 JSON 解析、内容形状与长度校验，并逐项核对卡牌数量、顺序、ID、牌位和方向。本地 Qwen 3.5 推理时通过提示词提供 schema，避免 Ollama 语法约束下输出耗尽；仍执行同样的 JSON 与身份校验。结构或牌面错误最多追加一次修复请求，仍失败则不展示不一致的结果。网络、额度和权限错误不会盲目自动重试。用户可以重新解读，原抽牌保持不变；同一 provider 与 model 已完成的解读直接返回缓存。
 
 同一会话的生成请求做并发合并或互斥。常规本机超时 180 秒、云端超时 90 秒；网页会显示等待状态，不展示未完成 JSON 或模型内部推理。服务重启时，原 `interpreting` 会话恢复为可重试状态。
 
@@ -191,4 +191,4 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 
 抽牌互动参考 [Codrops Baraja](https://tympanus.net/Development/Baraja/) 的叠牌、扇形和收放构图；运动节奏参考 [Anime.js](https://animejs.com/) 的错峰与层次感。当前使用原生 JavaScript/CSS 自行实现洗牌、分组扇形、悬停、归位、翻牌和光晕，没有引入或复制 Baraja、Anime.js 的插件实现。页面支持 `prefers-reduced-motion`。
 
-本机模型已经完成真实中文 JSON Schema 短测试，冷启动 42.818 秒、模型已加载后 2.038 秒，具体输入规模与设备见文档 07。**这两个短测试不能代替网页三张牌解读、追问、并发或质量评测，也不能当作整站耗时承诺。** 当前完整功能与浏览器验证见 [09 · 本轮实现验证](09-implementation-validation.md)。真实云端推理需要配置账户密钥后另行验证。
+本轮使用本地 Qwen 3.5:9b 完成五张决策牌和一次追问的真实生成，最终示例分别耗时约 52.1 秒和 28.1 秒。该时间只代表本机这一组输入，不能当作耗时承诺或完整质量保证。自动检查、浏览器验证及模型限制见 [12 · 牌阵与解读](12-spreads-and-readings.md)。真实云端推理需要配置账户密钥后另行验证。

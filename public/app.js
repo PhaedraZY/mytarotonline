@@ -12,6 +12,8 @@ const state = {catalog:null, settings:null, reading:null, revealed:0, page:0, ph
 const storage = {get(key){if(isStatic)return staticPreferences.get(key)??null;try{return localStorage.getItem(`lunaria:${key}`);}catch{return null;}},set(key,value){if(isStatic){staticPreferences.set(key,String(value));return staticAdapter.then(adapter=>adapter.setPreference(key,value));}try{localStorage.setItem(`lunaria:${key}`,String(value));}catch{}},remove(key){if(isStatic){staticPreferences.delete(key);return staticAdapter.then(adapter=>adapter.removePreference(key));}try{localStorage.removeItem(`lunaria:${key}`);}catch{}}};
 const delay = duration => new Promise(resolve => setTimeout(resolve, duration));
 let toastTimer;
+let fanView = {readingId:null,slots:[],opened:false};
+const paragraphs = value => String(value ?? "").trim().split(/\n+/).filter(Boolean).map(text=>`<p>${escapeHTML(text)}</p>`).join("");
 
 function toast(message) { $("#toast").textContent=message; $("#toast").hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$("#toast").hidden=true,4500); }
 function status(selector,message,kind="") { const element=$(selector); element.textContent=message; element.className=`inline-status ${kind}`; }
@@ -55,12 +57,26 @@ $$("dialog").forEach(dialog=>{ $("[data-close]",dialog).addEventListener("click"
 
 function readingCount(){return state.reading?.requiredCount||state.reading?.positions?.length||3;}
 function positionLabel(index){const position=state.reading?.positions?.[index];return state.reading?.drawn?.[index]?.positionLabel||position?.label||position?.name||["当下","未见之处","温柔的指引"][index]||"此刻的指引";}
+function spreadFor(reading=state.reading){return state.catalog?.spreads?.find(spread=>spread.id===reading?.spreadId);}
+function positionDescription(index){return state.reading?.positions?.[index]?.description||spreadFor()?.positions?.[index]?.description||"";}
+function spreadLayout(reading=state.reading){const layout=reading?.layout||spreadFor(reading)?.layout;return ["single","row","decision","relationship","cross"].includes(layout)?layout:readingCount()===1?"single":"row";}
+function renderSpreadOptions(){
+  const spreads=state.catalog?.spreads||[];if(!spreads.length)return;
+  const previous=$("input[name=spread]:checked")?.value;const active=spreads.find(spread=>spread.id===previous)?.id||spreads.find(spread=>spread.id==="three")?.id||spreads[0].id;
+  $("#spread-options").innerHTML='<legend>从你的问题出发，选择一种牌阵</legend>'+spreads.map(spread=>`<label class="spread-option"><input type="radio" name="spread" value="${escapeHTML(spread.id)}" ${spread.id===active?"checked":""}><span class="spread-copy"><span class="spread-title"><strong>${escapeHTML(spread.name)}</strong><span class="spread-count">${spread.positions.length} 张</span></span><small>${escapeHTML(spread.description||(spread.positions||[]).map(position=>position.label||position.name).join(" / "))}</small></span></label>`).join("");
+  $$("input[name=spread]").forEach(input=>input.addEventListener("change",renderSpreadGuide));renderSpreadGuide();
+}
+function renderSpreadGuide(){
+  const spread=state.catalog?.spreads.find(item=>item.id===$("input[name=spread]:checked")?.value);const guide=$("#spread-guide");if(!spread){guide.hidden=true;return;}
+  guide.hidden=false;guide.innerHTML=`<div class="spread-guide-heading"><span class="mini-label">HOW TO READ THIS SPREAD</span><p>${escapeHTML(spread.questionHint||spread.description||"按照下面的顺序，依次抽出每一个牌位的牌。")}</p></div><ol>${spread.positions.map((position,index)=>`<li><span class="position-number">${String(index+1).padStart(2,"0")}</span><div><strong>${escapeHTML(position.label||position.name)}</strong>${position.description?`<p>${escapeHTML(position.description)}</p>`:""}</div></li>`).join("")}</ol>`;
+  if(spread.questionHint)$("#question").placeholder=spread.questionHint;
+}
 function cardFor(draw={}){return draw.card||state.catalog?.cards.find(card=>card.id===draw.cardId)||{id:draw.cardId,name:draw.cardId||"塔罗牌",image:""};}
 async function rememberReading(){if(!state.reading)return;await Promise.all([storage.set("reading",state.reading.id),storage.set(`revealed:${state.reading.id}`,state.revealed)]);$("#resume-reading").hidden=false;}
 
 $("#question-form").addEventListener("submit",async event=>{
   event.preventDefault();if(state.busy||!state.catalog)return;
-  const generation=++state.generation;state.busy=true;state.page=0;state.revealed=0;state.reading=null;state.phase="shuffle";
+  const generation=++state.generation;state.busy=true;state.page=0;state.revealed=0;state.reading=null;state.phase="shuffle";fanView={readingId:null,slots:[],opened:false};
   $("#question-form").hidden=true;$("#draw-stage").hidden=false;$("#shuffle-scene").hidden=false;$("#selection-scene").hidden=true;$("#reading").hidden=true;setStep("shuffle");
   $("#shuffle-stack").innerHTML=Array.from({length:7},(_,index)=>`<div class="shuffle-card" style="--i:${index}">${cardSVG("moon",true)}</div>`).join("");
   scrollToElement($("#ritual"));
@@ -76,22 +92,38 @@ function renderDraw() {
   if(!state.reading)return;
   const drawn=state.reading.drawn||[];const count=readingCount();const complete=drawn.length>=count;
   $("#ritual").hidden=false;$("#question-form").hidden=true;$("#draw-stage").hidden=false;$("#shuffle-scene").hidden=true;$("#selection-scene").hidden=false;
-  $("#deck-label").textContent=`THE COMPLETE DECK / ${state.catalog?.cards.length||78}`;
-  $("#fan-area").hidden=complete;$("#fan-pagination").hidden=complete;$("#draw-cards").classList.toggle("single",count===1);
-  if(!complete){state.phase="select";setStep("select");$("#draw-status").textContent=`凭直觉，为「${positionLabel(drawn.length)}」选择一张牌 · ${drawn.length} / ${count}`;renderFan();}
+  $("#deck-label").textContent=`${state.reading.spreadName||spreadFor()?.name||"THE COMPLETE DECK"} / ${state.catalog?.cards.length||78} 张 · 已洗好`;
+  $("#fan-area").hidden=false;$("#fan-pagination").hidden=false;$("#fan-area").classList.toggle("deck-complete",complete);$("#draw-cards").classList.toggle("single",count===1);$("#draw-cards").dataset.layout=spreadLayout();$("#draw-cards").dataset.count=count;
+  $("#selected-heading").textContent=`已放下 ${drawn.length} / ${count} 张 · ${complete?"依次翻开":"从同一副牌中继续选择"}`;
+  $("#fan-hint").textContent=complete?"本次选牌已完成。它们来自同一次洗牌，现在看看各自的回应。":"只洗这一次。慢慢选，剩下的牌会留在原位。";
+  $("#draw-position-description").textContent=positionDescription(complete?Math.min(state.revealed,count-1):drawn.length);
+  if(!complete){state.phase="select";setStep("select");$("#draw-status").textContent=`为「${positionLabel(drawn.length)}」选择第 ${drawn.length+1} 张牌 · 已选 ${drawn.length} / ${count}`;}
   else if(state.revealed<count){state.phase="reveal";setStep("select");$("#draw-status").textContent=`轻触第 ${state.revealed+1} 张牌，看看「${positionLabel(state.revealed)}」。`;}
-  else {state.phase="reading";setStep("reading");$("#draw-status").textContent="星光已落定。把此刻，交给这场相遇。";}
-  renderSelected();updateRevealButton();status("#draw-error","");
+  else {state.phase="reading";setStep("reading");$("#draw-status").textContent="所有牌已翻开。一起看看它们如何回应你的问题。";$("#draw-position-description").textContent="";}
+  renderFan();renderSelected();updateRevealButton();status("#draw-error","");
 }
 
 function renderFan() {
-  const slots=state.reading?.slots||[];const pageSize=narrowScreen.matches?13:26;const pages=Math.max(1,Math.ceil(slots.length/pageSize));state.page=Math.min(Math.max(0,state.page),pages-1);
-  const start=state.page*pageSize;const visible=slots.slice(start,start+pageSize);const fan=$("#card-fan");
+  const reading=state.reading;if(!reading)return;
+  const incoming=reading.slots||[];const drawnTokens=new Set((reading.drawn||[]).map(draw=>draw.token).filter(Boolean));
+  if(fanView.readingId!==reading.id){fanView={readingId:reading.id,slots:incoming.map(slot=>({...slot})),opened:false};}
+  const current=new Map(incoming.map(slot=>[slot.token,slot]));
+  // Keep each original position even when an older API returns only unselected slots.
+  fanView.slots.forEach(slot=>{slot.selected=Boolean(slot.selected||current.get(slot.token)?.selected||drawnTokens.has(slot.token)||!current.has(slot.token));});
+  const slots=fanView.slots;const pageSize=narrowScreen.matches?13:26;const pages=Math.max(1,Math.ceil(slots.length/pageSize));state.page=Math.min(Math.max(0,state.page),pages-1);
+  const start=state.page*pageSize;const visible=slots.slice(start,start+pageSize);const fan=$("#card-fan");const complete=(reading.drawn||[]).length>=readingCount();
+  const key=`${reading.id}:${state.page}:${pageSize}`;const changed=fan.dataset.view!==key;
+  const animate=!fanView.opened&&!reading.drawn.length;fanView.opened=true;
+  if(changed){
+    fan.replaceChildren(...visible.map((slot,index)=>{const button=document.createElement("button");button.className=`fan-card${animate?" entering":""}`;button.type="button";button.dataset.token=slot.token;button.innerHTML=cardSVG("moon",true);button.addEventListener("click",()=>selectCard(button));button.addEventListener("animationend",()=>button.classList.remove("entering"),{once:true});return button;}));
+    fan.dataset.view=key;fan.scrollLeft=0;
+  }
   const spread=Math.min(690,Math.max(240,fan.clientWidth-150));
-  fan.innerHTML=visible.map((slot,index)=>{const unit=visible.length>1?(index/(visible.length-1)-.5):0;return `<button class="fan-card" type="button" data-token="${escapeHTML(slot.token)}" aria-label="选择这一组的第 ${index+1} 张牌" style="--i:${index};--x:${unit*spread}px;--y:${Math.abs(unit)*47}px;--r:${unit*48}deg">${cardSVG("moon",true)}</button>`;}).join("");
-  $$(".fan-card",fan).forEach(button=>button.addEventListener("click",()=>selectCard(button)));
-  $("#fan-page").textContent=`第 ${start+1}–${Math.min(start+pageSize,slots.length)} 张 / 余 ${slots.length} 张`;
-  $("#previous-cards").disabled=state.page===0;$("#next-cards").disabled=state.page===pages-1;fan.scrollLeft=0;
+  fan.style.setProperty("--slot-width",`${visible.length>1?spread/(visible.length-1):108}px`);
+  $$(".fan-card",fan).forEach((button,index)=>{const slot=visible[index];const unit=visible.length>1?(index/(visible.length-1)-.5):0;button.style.setProperty("--i",index);button.style.setProperty("--x",`${unit*spread}px`);button.style.setProperty("--y",`${Math.abs(unit)*47}px`);button.style.setProperty("--r",`${unit*48}deg`);button.classList.toggle("picked",slot.selected);button.classList.remove("chosen");button.disabled=slot.selected||complete;button.dataset.selected=String(slot.selected);button.setAttribute("aria-label",`第 ${start+index+1} 张牌${slot.selected?"，已放入牌阵":"，选择这张牌"}`);button.tabIndex=slot.selected?-1:0;});
+  const remaining=slots.filter(slot=>!slot.selected).length;
+  $("#fan-page").textContent=`第 ${start+1}–${Math.min(start+pageSize,slots.length)} 张 / 余 ${remaining} 张`;
+  $("#previous-cards").disabled=complete||state.page===0;$("#next-cards").disabled=complete||state.page===pages-1;
 }
 $("#previous-cards").addEventListener("click",()=>{if(state.busy)return;state.page--;renderFan();});
 $("#next-cards").addEventListener("click",()=>{if(state.busy)return;state.page++;renderFan();});
@@ -99,12 +131,13 @@ let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);
 
 async function selectCard(button) {
   if(state.busy||state.phase!=="select")return;
-  state.busy=true;const previousCount=state.reading.drawn.length;const id=state.reading.id;const generation=state.generation;
+  state.busy=true;const previousCount=state.reading.drawn.length;const id=state.reading.id;const generation=state.generation;const keyboard=button.matches(":focus-visible");
   $$(".fan-card").forEach(element=>element.disabled=true);$("#previous-cards").disabled=true;$("#next-cards").disabled=true;button.classList.add("chosen");
   try {
     const [reading]=await Promise.all([api(`/api/readings/${encodeURIComponent(id)}/select`,{token:button.dataset.token}),delay(reducedMotion.matches?0:350)]);
     if(generation!==state.generation)return;state.reading=reading;await rememberReading();renderDraw();
-    if(state.reading.drawn.length===readingCount()){$("#reveal-button").focus({preventScroll:true});scrollToElement($("#selection-scene"));}
+    if(state.reading.drawn.length===readingCount()){$("#reveal-button").focus({preventScroll:true});scrollToElement($("#draw-cards"));}
+    else if(keyboard){const buttons=$$(".fan-card");const index=buttons.indexOf(button);(buttons.slice(index+1).find(card=>!card.disabled)||buttons.find(card=>!card.disabled))?.focus({preventScroll:true});}
   } catch(error) {
     // A timed-out request may already have selected its card. Reconcile before allowing another pick.
     try{const fresh=await api(`/api/readings/${encodeURIComponent(id)}`);if(generation!==state.generation)return;state.reading=fresh;renderDraw();if((fresh.drawn||[]).length===previousCount)status("#draw-error",error.message,"error");else toast("这张牌已选好，继续你的旅程。");}
@@ -113,14 +146,20 @@ async function selectCard(button) {
 }
 
 function renderSelected() {
-  const count=readingCount();const drawn=state.reading.drawn||[];
-  $("#draw-cards").innerHTML=Array.from({length:count},(_,index)=>{
-    const draw=drawn[index];const label=positionLabel(index);
-    if(!draw)return `<div class="draw-card-wrap empty"><div class="card-placeholder"><span>0${index+1}</span><small>等待相遇</small></div><p class="draw-card-caption">${escapeHTML(label)}</p></div>`;
+  const count=readingCount();const drawn=state.reading.drawn||[];const container=$("#draw-cards");const existing=container.dataset.reading===state.reading.id;
+  if(!existing){container.innerHTML=Array.from({length:count},(_,index)=>`<div class="draw-card-wrap empty" data-position="${index}"><div class="card-placeholder"><span>${String(index+1).padStart(2,"0")}</span><small>等待放入</small></div><p class="draw-card-caption">${escapeHTML(positionLabel(index))}</p></div>`).join("");container.dataset.reading=state.reading.id;}
+  $$(".draw-card-wrap",container).forEach((wrapper,index)=>{
+    const draw=drawn[index];const label=positionLabel(index);wrapper.title=positionDescription(index);wrapper.dataset.displayNumber=String(index+1).padStart(2,"0");if(!draw)return;
     const card=cardFor(draw);const revealed=index<state.revealed;const next=drawn.length===count&&index===state.revealed;
-    return `<div class="draw-card-wrap"><button class="draw-card ${revealed?"flipped":""} ${next?"ready":""}" type="button" data-reveal="${index}" aria-label="${escapeHTML(revealed?`${label}：${card.name}，${draw.orientation==="reversed"?"逆位":"正位"}`:`翻开第 ${index+1} 张牌：${label}`)}" ${next?"":"disabled"}><span class="draw-card-inner"><span class="card-face card-back">${cardSVG("moon",true)}</span><span class="card-face card-front"><img src="${escapeHTML(card.image)}" alt="${revealed?escapeHTML(card.name):""}" class="${draw.orientation==="reversed"?"reversed":""}"></span></span></button><p class="draw-card-caption">${escapeHTML(label)}<strong>${revealed?`${escapeHTML(card.name)}<span class="orientation">${draw.orientation==="reversed"?"逆位":"正位"}</span>`:"· · ·"}</strong></p></div>`;
-  }).join("");
-  $$("[data-reveal]").forEach(button=>button.addEventListener("click",()=>revealNext()));
+    let button=$(".draw-card",wrapper);
+    if(!button){
+      wrapper.classList.remove("empty");wrapper.innerHTML=`<button class="draw-card" type="button" data-reveal="${index}"><span class="draw-card-inner"><span class="card-face card-back">${cardSVG("moon",true)}</span><span class="card-face card-front"><img src="${escapeHTML(card.image)}" alt="" class="${draw.orientation==="reversed"?"reversed":""}"></span></span></button><p class="draw-card-caption"></p>`;
+      button=$(".draw-card",wrapper);button.addEventListener("click",revealNext);
+      if(existing){wrapper.classList.add("just-arrived");wrapper.addEventListener("animationend",()=>wrapper.classList.remove("just-arrived"),{once:true});}else if(revealed)button.classList.add("restored");
+    }
+    button.classList.toggle("flipped",revealed);button.classList.toggle("ready",next);button.disabled=!next;button.setAttribute("aria-label",revealed?`${label}：${card.name}，${draw.orientation==="reversed"?"逆位":"正位"}`:drawn.length===count?`翻开第 ${index+1} 张牌：${label}`:`第 ${index+1} 张牌已放好：${label}`);$("img",button).alt=revealed?card.name:"";
+    $(".draw-card-caption",wrapper).innerHTML=`${escapeHTML(label)}<strong>${revealed?`${escapeHTML(card.name)}<span class="orientation">${draw.orientation==="reversed"?"逆位":"正位"}</span>`:"· · ·"}</strong>`;
+  });
 }
 function updateRevealButton() {
   const ready=state.reading.drawn.length===readingCount()&&state.revealed<readingCount();
@@ -136,8 +175,8 @@ async function revealNext() {
   await delay(reducedMotion.matches?0:650);if(generation!==state.generation)return;
   button.nextElementSibling.innerHTML=`${escapeHTML(positionLabel(index))}<strong>${escapeHTML(card.name)}<span class="orientation">${draw.orientation==="reversed"?"逆位":"正位"}</span></strong>`;
   state.busy=false;updateRevealButton();
-  if(state.revealed===readingCount()){state.phase="reading";setStep("reading");$("#draw-status").textContent="星光已落定。把此刻，交给这场相遇。";await interpretReading();}
-  else {const next=$(`[data-reveal="${state.revealed}"]`);next.disabled=false;next.classList.add("ready");$("#draw-status").textContent=`轻触第 ${state.revealed+1} 张牌，看看「${positionLabel(state.revealed)}」。`;next.focus({preventScroll:true});}
+  if(state.revealed===readingCount()){state.phase="reading";setStep("reading");$("#draw-status").textContent="所有牌已翻开。一起看看它们如何回应你的问题。";$("#draw-position-description").textContent="";await interpretReading();}
+  else {const next=$(`[data-reveal="${state.revealed}"]`);next.disabled=false;next.classList.add("ready");$("#draw-status").textContent=`轻触第 ${state.revealed+1} 张牌，看看「${positionLabel(state.revealed)}」。`;$("#draw-position-description").textContent=positionDescription(state.revealed);next.focus({preventScroll:true});if(readingCount()>3)next.scrollIntoView({behavior:reducedMotion.matches?"instant":"smooth",block:"center"});}
 }
 
 function resetRitual(){if(state.interpreting){toast("这封信还在书写中，请等它完成后再开启新的相遇。");return;}state.generation++;state.reading=null;state.revealed=0;state.busy=false;state.phase="question";$("#reading").hidden=true;$("#draw-stage").hidden=true;$("#question-form").hidden=false;$("button",$("#followup-form")).disabled=false;setStep("question");status("#start-status","");scrollToElement($("#ritual"));$("#question").focus({preventScroll:true});}
@@ -163,10 +202,12 @@ function renderInterpretation(result) {
   const reference=result.mode==="reference"||result.provider==="reference";
   $("#reading-mode").textContent=reference?"基础牌义 · 未使用 AI 生成":`AI 解读 · ${result.model||result.provider||"角色引路人"}`;
   $("#reading-question").textContent=state.reading.question?`你留下的问题：「${state.reading.question}」`:"为此刻的自己，留一点安静的空间。";
-  $("#reading-summary").textContent=interpretation.summary||"";
-  const parts=interpretation.cards||[];$("#reading-sections").style.gridTemplateColumns=parts.length===1?"1fr":"";
-  $("#reading-sections").innerHTML=parts.map((part,index)=>{const draw=state.reading.drawn.find(item=>item.cardId===part.cardId&&(!part.positionId||item.positionId===part.positionId))||state.reading.drawn[index];const card=cardFor(draw);return `<section class="reading-section"><p class="reading-position">0${index+1} / ${escapeHTML(draw.positionLabel||positionLabel(index))}</p><h4>${escapeHTML(card.name)} · ${(part.orientation||draw.orientation)==="reversed"?"逆位":"正位"}</h4>${part.symbolAnchor?`<p class="symbol-anchor">${escapeHTML(part.symbolAnchor)}</p>`:""}<p class="card-interpretation">${escapeHTML(part.interpretation)}</p>${part.reflectionQuestion?`<p class="reflection-question">${escapeHTML(part.reflectionQuestion)}</p>`:""}</section>`;}).join("");
-  $("#reading-synthesis").textContent=interpretation.synthesis||"";$("#reading-closing").textContent=interpretation.closing||themes[document.body.dataset.theme].closing;
+  $("#reading-summary").innerHTML=paragraphs(interpretation.summary);
+  const parts=interpretation.cards||[];
+  $("#reading-sections").innerHTML=parts.map((part,index)=>{const draw=state.reading.drawn.find(item=>item.cardId===part.cardId&&(!part.positionId||item.positionId===part.positionId))||state.reading.drawn[index]||{};const card=cardFor(draw);const orientation=part.orientation||draw.orientation;return `<section class="reading-section"><div class="reading-card-image">${card.image?`<img src="${escapeHTML(card.image)}" alt="${escapeHTML(card.name)}${orientation==="reversed"?"逆位":"正位"}" class="${orientation==="reversed"?"reversed":""}" loading="lazy">`:""}<span>${String(index+1).padStart(2,"0")}</span></div><div class="reading-card-copy"><p class="reading-position">${escapeHTML(draw.positionLabel||positionLabel(index))}</p><h4>${escapeHTML(card.name)} <span class="reading-orientation">${orientation==="reversed"?"逆位":"正位"}</span></h4>${!reference&&positionDescription(index)?`<p class="reading-position-help">这个牌位关注：${escapeHTML(positionDescription(index))}</p>`:""}${part.symbolAnchor?`<p class="symbol-anchor">${escapeHTML(part.symbolAnchor)}</p>`:""}<div class="card-interpretation">${paragraphs(part.interpretation)}</div>${part.reflectionQuestion?`<p class="reflection-question">${escapeHTML(part.reflectionQuestion)}</p>`:""}</div></section>`;}).join("");
+  $(".synthesis-section h4").textContent=parts.length===1?"这张牌对你的提醒":"把这些牌放在一起看";
+  $(".synthesis-section .eyebrow").textContent=parts.length===1?"BRING THE MESSAGE INTO YOUR LIFE":"THE THREAD BETWEEN YOUR CARDS";
+  $("#reading-synthesis").innerHTML=paragraphs(interpretation.synthesis);$("#reading-closing").textContent=interpretation.closing||themes[document.body.dataset.theme].closing;
   const actions=interpretation.actions||[];$("#actions-section").hidden=actions.length===0;$("#reading-actions").innerHTML=actions.map(action=>`<li>${escapeHTML(typeof action==="string"?action:action.text||action.description||action.title||"")}</li>`).join("");
   $("#followup-form").hidden=reference;$("#reading-title").focus({preventScroll:true});
 }
@@ -175,7 +216,7 @@ $("#followup-form").addEventListener("submit",async event=>{
   event.preventDefault();const input=$("#followup-question");const question=input.value.trim();if(!question||!state.reading||state.followupPending.has(state.reading.id))return;const id=state.reading.id;state.followupPending.add(id);const button=$("button",event.currentTarget);button.disabled=true;status("#followup-status","正在沿着你的问题，继续倾听…");
   try{const result=await api(`/api/readings/${encodeURIComponent(id)}/followups`,{question},240000);if(state.reading?.id===id){appendFollowup(question,result.answer);input.value="";status("#followup-status","");}}catch(error){if(state.reading?.id===id)status("#followup-status",error.message,"error");}finally{state.followupPending.delete(id);if(state.reading?.id===id)button.disabled=false;}
 });
-function appendFollowup(question,answer){const section=document.createElement("section");section.className="followup-answer";section.innerHTML=`<strong>${escapeHTML(question)}</strong><p>${escapeHTML(answer)}</p>`;$("#followup-answers").append(section);}
+function appendFollowup(question,answer){const section=document.createElement("section");section.className="followup-answer";section.innerHTML=`<strong>${escapeHTML(question)}</strong><div>${paragraphs(answer)}</div>`;$("#followup-answers").append(section);}
 
 async function restoreReading(id) {
   if(state.interpreting){toast("当前解读还在进行，请等这封信写完后再翻阅手记。");return;}
@@ -202,10 +243,14 @@ function renderLibrary(){
   $$("[data-detail]").forEach(button=>button.addEventListener("click",()=>showCardDetail(button.dataset.detail)));
 }
 $("#library-search").addEventListener("input",renderLibrary);$("#library-filter").addEventListener("change",renderLibrary);
-function showCardDetail(id){const card=state.catalog.cards.find(item=>item.id===id);if(!card)return;const detail=$("#card-detail");detail.hidden=false;detail.innerHTML=`<img src="${escapeHTML(card.image)}" alt="${escapeHTML(card.name)}"><div><h3>${escapeHTML(card.name)}</h3><p class="detail-en">${escapeHTML(card.nameEn)} / ${escapeHTML(card.id)}</p><h4>正位 · ${escapeHTML((card.upright?.keywords||[]).join(" / "))}</h4><p>${escapeHTML(card.upright?.meaning)}</p><h4>逆位 · ${escapeHTML((card.reversed?.keywords||[]).join(" / "))}</h4><p>${escapeHTML(card.reversed?.meaning)}</p></div><button class="close-button" aria-label="收起牌义">×</button>`;$("button",detail).addEventListener("click",()=>detail.hidden=true);detail.scrollIntoView({behavior:reducedMotion.matches?"instant":"smooth",block:"nearest"});}
+function showCardDetail(id){
+  const card=state.catalog.cards.find(item=>item.id===id);if(!card)return;const detail=$("#card-detail");const symbolism=Array.isArray(card.symbolism)?card.symbolism.join("\n"):card.symbolism;
+  const meaningSection=(orientation,label)=>{const meaning=card[orientation]||{};return `<details class="meaning-orientation" ${orientation==="upright"?"open":""}><summary><strong>${label}</strong><span>${escapeHTML((meaning.keywords||[]).join(" / "))}</span></summary><div class="meaning-core">${paragraphs(meaning.meaning)}</div><dl class="meaning-contexts">${[["everyday","放到日常生活里"],["relationships","关系与相处"],["work","工作与创作"],["advice","可以做的一件小事"]].filter(([key])=>meaning[key]).map(([key,title])=>`<div><dt>${title}</dt><dd>${paragraphs(meaning[key])}</dd></div>`).join("")}</dl>${meaning.reflection?`<p class="meaning-reflection">留给自己的问题：${escapeHTML(meaning.reflection)}</p>`:""}</details>`;};
+  detail.hidden=false;detail.innerHTML=`<div class="detail-art"><img src="${escapeHTML(card.image)}" alt="${escapeHTML(card.name)}"></div><div class="detail-content"><h3>${escapeHTML(card.name)}</h3><p class="detail-en">${escapeHTML(card.nameEn)} / ${escapeHTML(card.id)}</p>${symbolism?`<section class="detail-symbolism"><h4>从经典牌面，理解它的象征</h4>${paragraphs(symbolism)}</section>`:""}${meaningSection("upright","正位")}${meaningSection("reversed","逆位")}<p class="meaning-note">逆位不等于坏结果，也可能是某种力量受阻、过度，或正在向内发生。结合你的问题和牌位来理解。</p></div><button class="close-button" aria-label="收起牌义">×</button>`;$(".close-button",detail).addEventListener("click",()=>detail.hidden=true);detail.scrollIntoView({behavior:reducedMotion.matches?"instant":"smooth",block:"start"});
+}
 
 function renderPreview(){const previewNames=["The Star","The Moon","The Hermit"];const chosen=previewNames.map(name=>state.catalog.cards.find(card=>card.nameEn?.toLowerCase()===name.toLowerCase())).filter(Boolean);if(chosen.length<3)chosen.push(...state.catalog.cards.filter(card=>!chosen.includes(card)).slice(0,3-chosen.length));$("#preview-cards").innerHTML=chosen.map(card=>`<img src="${escapeHTML(card.image)}" alt="" loading="lazy">`).join("");}
-async function refreshCatalog(){state.catalog=await api("/api/catalog");$("#upload-card-id").innerHTML=state.catalog.cards.map(card=>`<option value="${escapeHTML(card.id)}">${escapeHTML(card.name)} · ${escapeHTML(card.id)}</option>`).join("");$("#library-title .title-count").textContent=state.catalog.cards.length;renderPreview();if($("#library-dialog").open){$("#card-detail").hidden=true;renderLibrary();}}
+async function refreshCatalog(){state.catalog=await api("/api/catalog");$("#upload-card-id").innerHTML=state.catalog.cards.map(card=>`<option value="${escapeHTML(card.id)}">${escapeHTML(card.name)} · ${escapeHTML(card.id)}</option>`).join("");$("#library-title .title-count").textContent=state.catalog.cards.length;renderSpreadOptions();renderPreview();if($("#library-dialog").open){$("#card-detail").hidden=true;renderLibrary();}}
 
 const baseURLGroup=document.createElement("div");baseURLGroup.id="base-url-group";baseURLGroup.innerHTML='<label for="base-url">API 地址</label><input id="base-url" type="url" autocomplete="off" placeholder="官方兼容 API 地址"><p class="field-note">百炼如使用专属工作空间，请填控制台提供的兼容接口地址。</p>';$("#api-key-group").before(baseURLGroup);
 if(isStatic){
