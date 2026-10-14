@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "0.1",
+  "guideDeckId": "inner-garden-guides",
+  "status": "original_proposal",
+  "standardTarotPool": false,
+  "cards": [
+    {
+      "cardId": "guide-pause",
+      "nameZh": "停驻",
+      "prompt": "此刻最需要你暂停的一件事是什么？"
+    },
+    {
+      "cardId": "guide-mirror",
+      "nameZh": "照见",
+      "prompt": "这次体验让你更清楚地看见了哪种需要？"
+    },
+    {
+      "cardId": "guide-release",
+      "nameZh": "放下",
+      "prompt": "哪一种期待已经不必继续由你承担？"
+    },
+    {
+      "cardId": "guide-begin",
+      "nameZh": "启程",
+      "prompt": "未来一天，你愿意做的最小一步是什么？"
+    }
+  ]
+}

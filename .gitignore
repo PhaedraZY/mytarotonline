@@ -1,0 +1,21 @@
+node_modules/
+.runtime/
+.models/
+.env
+.env.*
+!.env.example
+*.log
+__pycache__/
+dist/
+.pages-build-*/
+# Local research caches, device reports and screenshots are not release sources.
+research/
+prototype/
+docs/0[0-5]-*.md
+docs/07-local-model-setup.md
+docs/09-implementation-validation.md
+docs/screenshots/
+scripts/deck-contact-*.jpg
+scripts/deck-validation.json
+# Rebuild original scans from the source manifest when needed.
+public/assets/decks/rws/*.jpg

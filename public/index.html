@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#10141f">
+  <meta name="description" content="月隐之庭，一场属于你的塔罗旅程。78张经典牌、原创角色世界与温柔的自我探索。">
+  <title>LUNARIA · 月隐之庭</title>
+  <link rel="stylesheet" href="./styles.css"><script src="./deployment.js" defer></script><script src="./art.js" defer></script><script src="./app.js" defer></script>
+</head>
+<body data-theme="lunar">
+  <div class="ambient" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="Lunaria 月隐之庭首页"><span class="brand-mark" aria-hidden="true">☽</span><span>LUNARIA<small>月隐之庭 · TAROT ATELIER</small></span></a>
+    <nav aria-label="主要导航"><a href="#worlds">你的宇宙</a><button class="nav-link" data-open="library">牌之图鉴</button><button class="nav-link" data-open="journal">星光手记</button><button class="nav-enter" data-enter>开始探索 <span aria-hidden="true">↗</span></button><button class="settings-trigger" data-open="settings" aria-label="打开世界设置" title="世界设置">⚙</button></nav>
+  </header>
+  <main id="home">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> A QUIET CONVERSATION WITH YOURSELF</p>
+        <h1 id="hero-title">答案，藏在<br>你的<span class="title-accent">星光</span>里<span class="title-star" aria-hidden="true">✧</span></h1>
+        <p class="hero-description" id="world-description">当世界的声音渐渐安静，<br>让一张牌，陪你听见内心的回响。</p>
+        <div class="hero-actions"><button class="primary-button" data-enter>开启我的占卜 <span aria-hidden="true">↗</span></button><span class="time-note">一段留给自己的时光</span></div>
+        <p class="demo-label"><span aria-hidden="true">✦</span> 78 张经典塔罗 · 跟随直觉，与你相遇</p>
+        <button class="resume-link" id="resume-reading" hidden>继续上一次的相遇 <span aria-hidden="true">→</span></button>
+      </div>
+      <div class="hero-art" aria-label="星星、月亮与隐者原创象征插画">
+        <div class="orbit orbit-one" aria-hidden="true"></div><div class="orbit orbit-two" aria-hidden="true"></div>
+        <span class="orbit-label orbit-label-top" aria-hidden="true">AS ABOVE</span><span class="orbit-label orbit-label-bottom" aria-hidden="true">SO WITHIN</span>
+        <span class="art-spark spark-one" aria-hidden="true">✦</span><span class="art-spark spark-two" aria-hidden="true">✧</span><span class="art-spark spark-three" aria-hidden="true">·</span>
+        <div class="hero-card hero-card-left" data-art="star"></div><div class="hero-card hero-card-right" data-art="hermit"></div><div class="hero-card hero-card-center" data-art="moon"></div>
+        <p class="art-caption">THE MOON <span>XVIII</span><span class="caption-line"></span> 向内，看见另一片宇宙</p>
+      </div>
+      <div class="hero-bottom"><span>每一次相遇，都始于你的直觉。</span><a href="#worlds">向下探索 <span aria-hidden="true">↓</span></a><span class="edition">VOL. 01 — THE INNER GARDEN</span></div>
+    </section>
+
+    <section class="worlds section-shell" id="worlds" aria-labelledby="worlds-title">
+      <div class="section-intro"><div><p class="eyebrow">01 / A WORLD THAT FEELS LIKE YOU</p><h2 id="worlds-title">同一片星空，<em>不同的你。</em></h2></div><p>让你的原创角色，成为这场旅程的引路人。<br>选择一种气质，感受世界如何回应。</p></div>
+      <div class="world-options" role="group" aria-label="选择世界主题">
+        <button class="world-option active" data-world="lunar" aria-pressed="true"><span class="world-symbol" aria-hidden="true">☾</span><span><small>THE INNER GARDEN</small><strong>月隐之庭</strong><span class="world-meta">INFJ 灵感 · 温柔、内省、星月</span></span><span class="world-number">01 <span aria-hidden="true">↗</span></span></button>
+        <button class="world-option" data-world="ember" aria-pressed="false"><span class="world-symbol" aria-hidden="true">✷</span><span><small>THE CRIMSON STUDY</small><strong>赤曜书房</strong><span class="world-meta">炼金术士 · 炽热、敏锐、赤金</span></span><span class="world-number">02 <span aria-hidden="true">↗</span></span></button>
+        <button class="world-option" data-world="forest" aria-pressed="false"><span class="world-symbol" aria-hidden="true">❋</span><span><small>THE WHISPERING WOODS</small><strong>森语回廊</strong><span class="world-meta">森林旅人 · 自然、松弛、苔绿</span></span><span class="world-number">03 <span aria-hidden="true">↗</span></span></button>
+      </div>
+      <p class="world-note">INFJ 是角色与审美灵感。你始终拥有定义自己的自由。</p>
+    </section>
+
+    <section class="ritual section-shell" id="ritual" aria-labelledby="ritual-title" hidden>
+      <div class="ritual-heading"><p class="eyebrow">02 / YOUR MOMENT OF STILLNESS</p><h2 id="ritual-title" tabindex="-1">把此刻的心事，<em>交给星光。</em></h2><p id="ritual-guide">你不必立刻找到答案。先听听，内心真正想问什么。</p></div>
+      <ol class="ritual-steps" aria-label="占卜进度"><li class="active" data-step="question"><span>01</span> 留下心事</li><li data-step="shuffle"><span>02</span> 静心洗牌</li><li data-step="select"><span>03</span> 直觉选牌</li><li data-step="reading"><span>04</span> 听见回响</li></ol>
+      <form id="question-form" class="question-form">
+        <label for="question">此刻，你想探索什么？<span>可留空 · 最多 600 字</span></label>
+        <textarea id="question" name="question" maxlength="600" rows="3" placeholder="例如：面对新的工作机会，我可以如何看清自己的期待与顾虑？"></textarea>
+        <fieldset class="spread-options"><legend>选择与你此刻相合的牌阵</legend><label class="spread-option"><input type="radio" name="spread" value="one"><span><strong>一束微光</strong><small>一张牌 · 此刻的指引</small></span><span class="spread-icon" aria-hidden="true">▯</span></label><label class="spread-option"><input type="radio" name="spread" value="three" checked><span><strong>内心的回响</strong><small>三张牌 · 当下 / 未见 / 指引</small></span><span class="spread-icon" aria-hidden="true">▯ ▯ ▯</span></label></fieldset>
+        <div class="question-footer"><label class="check-label"><input id="allow-reversed" type="checkbox" checked><span>让正位与逆位都参与这次相遇</span></label><button class="primary-button" id="start-button" type="submit" disabled>静心，开始洗牌 <span aria-hidden="true">✧</span></button></div>
+        <p class="inline-status" id="start-status" role="status">正在展开完整牌组…</p>
+      </form>
+
+      <div id="draw-stage" class="draw-stage" hidden>
+        <div id="shuffle-scene" class="shuffle-scene" hidden aria-label="正在洗牌"><div class="shuffle-orbit" aria-hidden="true"></div><div class="shuffle-halo" aria-hidden="true"></div><div id="shuffle-stack" class="shuffle-stack" aria-hidden="true"></div><div class="shuffle-caption"><span class="eyebrow">LET THE NOISE FALL AWAY</span><h3>让星光，重新排列。</h3><p>轻轻呼吸，把注意力带回此刻。</p></div></div>
+        <div id="selection-scene" hidden>
+          <div class="selection-top"><span class="mini-label" id="deck-label">THE COMPLETE DECK / 78</span><button class="text-button" id="restart-draw">重新开始 ↺</button></div>
+          <p class="draw-status" id="draw-status" role="status" tabindex="-1"></p>
+          <div id="fan-area" class="fan-area"><div class="fan-aura" aria-hidden="true"></div><div class="fan-circle" aria-hidden="true"></div><div id="card-fan" class="card-fan" aria-label="待选择的牌"></div><p class="fan-hint">无需寻找正确的那张。让直觉，轻轻停留。</p></div>
+          <div class="fan-pagination" id="fan-pagination"><button id="previous-cards" class="round-button" aria-label="上一组牌">←</button><span id="fan-page"></span><button id="next-cards" class="round-button" aria-label="下一组牌">→</button></div>
+          <div class="selected-heading"><span></span><p>属于你的相遇</p><span></span></div>
+          <div class="draw-cards" id="draw-cards"></div>
+          <div class="draw-controls"><button class="primary-button" id="reveal-button" hidden>轻触，开启第一张牌 <span aria-hidden="true">✧</span></button></div>
+          <p class="inline-status" id="draw-error" role="alert"></p>
+        </div>
+      </div>
+
+      <article class="reading" id="reading" aria-labelledby="reading-title" hidden>
+        <div class="reading-heading"><p class="eyebrow" id="reading-eyebrow">A NOTE FROM YOUR INNER GARDEN</p><h3 id="reading-title" tabindex="-1">星光写给你的信</h3><span class="sample-pill" id="reading-mode"></span></div>
+        <p class="reading-question" id="reading-question"></p>
+        <div class="interpret-loading" id="interpret-loading" hidden><span class="loading-star" aria-hidden="true">✧</span><p>正在把牌面的象征，织成给你的信。</p><small>复杂解读可能需要一些时间，你的牌已妥善保存。</small></div>
+        <div id="interpret-error" class="error-panel" hidden><p id="interpret-error-text"></p><button id="retry-interpret" class="primary-button">再试一次</button><button id="reference-interpret" class="text-button">先阅读基础牌义</button><button class="text-button" data-open="settings">调整解读设置</button></div>
+        <div id="reading-content" hidden><p class="reading-summary" id="reading-summary"></p><div id="reading-sections" class="reading-sections"></div><section class="synthesis-section"><p class="eyebrow">THE THREAD BETWEEN YOUR CARDS</p><h4>连成一条温柔的线</h4><p id="reading-synthesis"></p></section><section class="actions-section" id="actions-section"><h4>把一点星光，带回生活</h4><ul id="reading-actions"></ul></section><div class="reading-end"><p id="reading-closing"></p><p class="saved-note">本次相遇已保存至「星光手记」</p><button class="text-button" id="restart-button">再留一段时光给自己 <span aria-hidden="true">↺</span></button></div><form id="followup-form" class="followup-form"><label for="followup-question">想沿着这封信，再聊一点？</label><div><input id="followup-question" maxlength="600" placeholder="写下你想继续探索的一个问题" required><button type="submit" class="outline-button">继续聊聊 ↗</button></div><p class="inline-status" id="followup-status" role="status"></p></form><div id="followup-answers" class="followup-answers" aria-live="polite"></div></div>
+      </article>
+      <p class="ritual-disclaimer">塔罗提供象征与自我探索的视角，AI 解读也可能有偏差。你的人生，始终由你书写。</p>
+    </section>
+
+    <section class="deck-preview section-shell"><div><p class="eyebrow">78 STORIES / INFINITE REFLECTIONS</p><h2>每一张牌，<em>都是一扇门。</em></h2><p>22 张大阿尔卡纳，56 张小阿尔卡纳。<br>从经典的象征出发，也为你的原创世界留白。</p><button class="text-button" data-open="library">翻阅完整牌之图鉴 <span>↗</span></button></div><div class="preview-cards" id="preview-cards" aria-hidden="true"></div></section>
+    <section class="about section-shell" id="about"><span class="about-mark" aria-hidden="true">✧</span><p class="eyebrow">MADE FOR YOUR OWN UNIVERSE</p><h2>不是每一个宇宙，<br>都需要同一种模样。</h2><p>从角色的声音，到牌面的一笔一画。<br>让占卜成为一场，只属于你的相遇。</p><button class="text-button" data-open="settings">为你的世界换上原创牌面 <span>↗</span></button><span class="about-line"></span><p class="about-footnote">经典牌图来源与许可见牌之图鉴。原创牌面由你上传、由你定义。</p></section>
+  </main>
+  <footer class="site-footer"><a class="footer-brand" href="#home">LUNARIA</a><span>月隐之庭 · 属于你的塔罗宇宙</span><button class="text-button mobile-journal" data-open="journal">星光手记 ↗</button><a href="#home">回到星空 <span aria-hidden="true">↑</span></a></footer>
+
+  <dialog id="library-dialog" class="drawer drawer-wide" aria-labelledby="library-title"><div class="drawer-top"><div><p class="eyebrow">THE ARCHIVE OF SYMBOLS</p><h2 id="library-title">牌之图鉴 <span class="title-count">78</span></h2></div><button class="close-button" data-close aria-label="关闭图鉴">×</button></div><p class="drawer-description">认识每一张牌，也慢慢认识自己。</p><div class="library-tools"><input type="search" id="library-search" placeholder="寻找牌名或关键词…" aria-label="搜索塔罗牌"><select id="library-filter" aria-label="按花色筛选"><option value="all">全部 78 张</option><option value="major">大阿尔卡纳 · 22</option><option value="wands">权杖 · 14</option><option value="cups">圣杯 · 14</option><option value="swords">宝剑 · 14</option><option value="pentacles">星币 · 14</option></select></div><p class="library-count" id="library-count" role="status"></p><div id="card-detail" class="card-detail" hidden></div><div class="library-grid" id="library-grid"></div><p class="asset-credit" id="asset-credit">经典 Rider–Waite–Smith 牌组 · Pamela Colman Smith 绘。1910 年原版牌图属于公共领域（Public domain），图源 <a href="https://commons.wikimedia.org/wiki/Category:Rider-Waite-Smith_tarot_deck_(TaionWC)" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>。逐图来源记录见项目牌面文档。</p></dialog>
+
+  <dialog id="journal-dialog" class="drawer" aria-labelledby="journal-title"><div class="drawer-top"><div><p class="eyebrow">MOMENTS YOU LEFT IN THE STARS</p><h2 id="journal-title">星光手记</h2></div><button class="close-button" data-close aria-label="关闭手记">×</button></div><p class="drawer-description">那些和自己认真相处过的时刻。</p><div id="journal-list" class="journal-list"></div><p class="drawer-footnote">记录保存在这台电脑的服务端，随时可以继续尚未结束的抽牌。</p></dialog>
+
+  <dialog id="settings-dialog" class="drawer" aria-labelledby="settings-title"><div class="drawer-top"><div><p class="eyebrow">MAKE THIS WORLD YOURS</p><h2 id="settings-title">世界设置</h2></div><button class="close-button" data-close aria-label="关闭设置">×</button></div><p class="drawer-description">为你的引路人选择声音，为你的宇宙换上画作。</p><form id="settings-form"><section class="settings-section"><h3><span>01</span> 引路人的声音</h3><label for="provider-select">解读服务</label><select id="provider-select"></select><label for="model-name">模型名称</label><input id="model-name" autocomplete="off" placeholder="选择服务后自动填入"><p class="field-note" id="provider-note"></p><div id="api-key-group"><label for="api-key">API Key</label><input id="api-key" type="password" autocomplete="off" placeholder="填写新密钥；留空保留已保存的密钥"><p class="field-note">密钥只提交到本机服务端，不写入浏览器存储。</p></div><p class="local-model-state" id="local-model-state"></p><div class="settings-actions"><button class="primary-button" type="submit">保存解读设置</button><button class="outline-button" id="test-model" type="button">测试连接</button></div><p class="inline-status" id="settings-status" role="status"></p></section></form>
+    <section class="settings-section"><h3><span>02</span> 你的原创牌面</h3><p class="field-note">保留牌的名称与象征，只替换它在这个世界里的样子。支持 JPG、PNG、WebP，建议竖幅 2:3。</p><label for="upload-card-id">选择要替换的牌</label><select id="upload-card-id"></select><label class="upload-zone" for="single-upload"><span aria-hidden="true">✧</span><strong>选择一幅你的画作</strong><small>单张图片 · 最多 8 MB</small><input id="single-upload" type="file" accept="image/jpeg,image/png,image/webp"></label><details class="batch-upload"><summary>已经画好一整套？批量上传</summary><p class="field-note">用标准牌 ID 命名文件（如 <code>major-00.jpg</code>）。先下载命名清单，将作品对应命名后即可批量替换。</p><button id="download-manifest" class="text-button">下载 78 张命名清单 ↓</button><label class="batch-input-label" for="batch-upload">选择多张图片</label><input id="batch-upload" type="file" multiple accept="image/jpeg,image/png,image/webp"></details><p class="inline-status" id="upload-status" role="status"></p><div class="settings-actions reset-actions"><span id="custom-card-count">尚未替换原创牌面</span><button id="reset-deck" class="text-button">恢复经典牌面</button></div></section><p class="drawer-footnote">世界主题只改变叙述风格与视觉，抽牌逻辑始终一致。</p>
+  </dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
+
